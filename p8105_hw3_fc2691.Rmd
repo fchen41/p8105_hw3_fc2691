@@ -4,3 +4,240 @@ author: "FC"
 date: "10/16/2021"
 output: html_document
 ---
+
+```{r}
+library(tidyverse)
+library(p8105.datasets)
+library(knitr)
+
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+### Problem 1
+The goal is to do some exploration of this dataset. To that end, write a short description of the dataset, noting the size and structure of the data, describing some key variables, and giving illstrative examples of observations. Then, do or answer the following (commenting on the results of each):  
+
+```{r}
+data("instacart") #load a dataset
+
+# Find out the most ordered aisle. 
+insta_aisle = 
+  instacart %>% 
+  janitor::clean_names() %>% 
+  distinct() %>% 
+  group_by(aisle, aisle_id, department) %>% 
+  summarise(aisles_obs = n()) %>% 
+  arrange(desc(aisles_obs))
+kable(insta_aisle[1:5,], caption = "Instacart Aisles Count")
+
+# Make a plot shows the number of orders in each aisle. 
+plot_insta_aisle = 
+  insta_aisle %>% 
+  filter(aisles_obs > 10000) %>% 
+  ggplot(aes(x = aisle_id, y = aisles_obs, color = department)) + 
+    geom_point() + geom_line() + 
+    theme_classic() +
+    theme(legend.position = "bottom") + 
+    labs(
+    title = "Order Number in Aisles (>10000)",
+    x = "Aisle ID (#)",
+    y = "Order Numbers (N)",
+    caption = "Data from the instacart package"
+  )
+plot_insta_aisle
+
+#Make a plot shows the number of order items in produce
+plot_insta_prod = 
+  insta_aisle %>% 
+  filter(department == 'produce' & aisles_obs > 10000) %>% 
+  ggplot(aes(x = aisle, y = aisles_obs)) +
+    geom_bar(stat = "identity", alpha = 0.5) +
+    theme_classic() +
+    theme(legend.position = "bottom") +
+    labs(
+    title = "Order Number in produce (>10000)",
+    x = "Aisle",
+    y = "Order Numbers (N)",
+    caption = "Data from the instacart package"
+  )
+plot_insta_prod
+
+```
+
+- How many aisles are there, and which aisles are the most items ordered from?    
+**ANSWER**: There are `r max(pull(instacart, "aisle_id"))` aisles in this instacart data. Fresh vegetables are the most ordered items from which reached about `r max(pull(insta_aisle, "aisles_obs"))` orders.   
+- Make a plot that shows the number of items ordered in each aisle, limiting this to aisles with more than 10000 items ordered. Arrange aisles sensibly, and organize your plot so others can read it.  
+- Make a table showing the three most popular items in each of the aisles “baking ingredients”, “dog food care”, and “packaged vegetables fruits”. Include the number of times each item is ordered in your table.  
+```{r}
+# Show the three most popular items in three aisles. 
+pop_items = 
+  instacart %>% 
+  janitor::clean_names() %>% 
+  filter(aisle == 'baking ingredients' | aisle == 'dog food care' | aisle == 'packaged vegetables fruits') %>% 
+  distinct() %>% 
+  group_by(aisle, product_name) %>% 
+  summarise(pop_items_obs = n()) %>% 
+  arrange(aisle, desc(pop_items_obs)) %>% 
+  slice(1:3)
+
+kable(pop_items, caption = "Three Most Popular Items in Aisles" )
+ 
+```
+- Make a table showing the mean hour of the day at which Pink Lady Apples and Coffee Ice Cream are ordered on each day of the week; format this table for human readers
+(i.e. produce a 2 x 7 table).
+```{r}
+# The mean hour of the day for lady apples and coffee ice cream
+mean_hrs_sum = 
+  instacart %>% 
+  janitor::clean_names() %>% 
+  filter(product_name == 'Pink Lady Apples' | product_name == 'Coffee Ice Cream') %>% 
+  distinct() %>% 
+  group_by(product_name, order_dow) %>%  
+  summarize(mean_hrs = mean(order_hour_of_day)) %>% 
+  mutate(mean_hrs = 
+           round(as.numeric(mean_hrs), 1)) %>% 
+  mutate(order_dow = recode(    
+    order_dow,
+    "0" = "Sun",
+    "1" = "Mon",
+    "2" = "Tue",
+    "3" = "Wed",
+    "4" = "Thu",
+    "5" = "Fri",
+    "6" = "Sat")) %>% 
+  pivot_wider(
+    names_from = "order_dow",
+    values_from = "mean_hrs"
+  ) 
+kable(mean_hrs_sum, caption = "The Mean Hour of the Day for P&C")
+
+```
+*To that end, write a short description of the dataset, noting the size and structure of the data, describing some key variables, and giving illstrative examples of observations. Then, do or answer the following (commenting on the results of each):*  
+**ANSWER**: From the dataset gained from Instacart, it's dimension is (`r dim(instacart)`) which describes the order details from customers including information about products, order time, frequency, department and so on. It shows the most popular aisle type is fresh vegetables from the produce department (fresh fruits, fresh vegetables, packaged vegetables fruit...) which we eat often everyday. The three most popular items in "baking ingredients" aisle are light brown sugar, pure baking soda and cane sugar. The three most popular items in "dog food care" aisle are snack sticks chicken & rice recipe dog treat, organix chicken & brown rice recipe and small dog biscuits. The most three popular items in "packaged vegetable fruits" aisle are organic baby spinach, organic raspberries and organic blueberries. The mean hour of ice cream is relatively late compared to people who buy pink lady apples. And mean hour  of Wed is relatively later than other days of the week for pink lady, and the mean hour for customers who buy ice cream is later on Tue to Thu.   
+
+### Problem 2  
+This problem uses the BRFSS (dataset_brfss.html) data. DO NOT include this dataset in your local data directory; instead, load the data from the p8105.datasets (https://github.com/P8105/p8105.datasets) package.  
+First, do some data cleaning:  
+- format the data to use appropriate variable names;   
+- focus on the “Overall Health” topic  
+- include only responses from “Excellent” to “Poor”  
+- organize responses as a factor taking levels ordered from “Poor” to “Excellent”  
+```{r}
+data("brfss_smart2010")
+
+#Clean brfss data and focus on the response from "Overall Health" topic. 
+brfss_clean = 
+  brfss_smart2010 %>% 
+  janitor::clean_names() %>% 
+  distinct() %>% 
+  filter(topic == "Overall Health") %>% 
+  separate(locationdesc, into = c("state", "county"), sep = " - ") %>% 
+  select(year, state, county, response, data_value) %>% 
+  mutate(
+    response = factor(response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent")))
+kable(brfss_clean[1:10,], caption = "BRFSS Data on 'Overall Health' Topic")
+```
+
+Using this dataset, do or answer the following (commenting on the results of each):  
+- In 2002, which states were observed at 7 or more locations? What about in 2010?  
+```{r}
+# Summarize location according to states in 2002 and 2010. 
+brfss_obs_02_10 = 
+  brfss_clean %>% 
+  filter(year == 2002 | year == 2010) %>% 
+  group_by(year, state) %>% 
+  summarize(location_count = n()) %>% 
+  filter(location_count >= 7) %>% 
+  pivot_wider(
+    names_from = state, 
+    values_from = location_count
+  )
+kable(brfss_obs_02_10, caption = "States observed >=7 locations in 2002 and 2010")
+```
+*ANSWER*: In 2002, AZ, CO, CT, DE, FL, GA, HI, ID, IL, IN, KS, LA, MA, MD, ME, MI, MN, MO, NC, NE, NH, NJ, NV, NY, OH, OK, OR, PA, RI, SC, SD, TN, TX, UT, VT, WA observed 7 or more locations. In 2010, besides the states observed on 2002, AL, AR, CA, IA, MS, MT, ND, NM, WY also observed 7 or more locations.   
+- Construct a dataset that is limited to Excellent responses, and contains, year, state, and a variable that averages the data_value across locations within a state. Make a “spaghetti” plot of this average value over time within a state (that is, make a plot showing a line for each state across years – the geom_line geometry and group aesthetic will help).  
+```{r}
+# Clean brfss response table which is limited to excellent response with the average of data_value. 
+brfss_response = 
+  brfss_clean %>% 
+  filter(response == "Excellent") %>% #limit to excellent response
+  group_by(year, state) %>%
+  summarise(avg_data_value = mean(data_value)) %>% 
+  mutate(avg_data_value = round(as.numeric(avg_data_value), 1))
+# Show readable table for the dataset. 
+brfss_response_table = 
+  brfss_response %>% 
+  pivot_wider(
+    names_from = year, 
+    values_from = avg_data_value
+  )
+kable(brfss_response_table[1:10,], caption = "Average Data Value within States with Excellent Response")
+
+# Making "spaghetti"plot
+brfss_response_plot = 
+  brfss_response %>% 
+  ggplot(aes(x = year, y = avg_data_value, color = state)) + 
+    geom_line(alpha = 0.5) + 
+    theme_classic() + 
+    theme(legend.position = "bottom") + 
+    labs(
+     title = "Average Value Over Time within States", 
+     x = "Year(2002~2010)", 
+     y = "Value Average", 
+     caption = "Data from brfss package"
+  ) 
+brfss_response_plot
+
+```
+
+- Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State.
+```{r}
+library(patchwork)
+brfss_data_2006 = 
+  brfss_clean %>% 
+  filter(year == 2006 & state == "NY") %>% 
+  ggplot(aes(x = response, y = data_value, color = county)) +
+    geom_line(alpha = 0.5) +
+    theme_classic() +
+    theme(legend.position = "bottom") +
+    labs(
+     title = "Value for Responses in NY 2006",
+     x = "Response",
+     y = "Value",
+     caption = "Data from brfss package"
+  )
+brfss_data_2006
+
+brfss_data_2010 = 
+  brfss_clean %>% 
+  filter(year == 2010 & state == "NY") %>% 
+  ggplot(aes(x = response, y = data_value, color = county)) +
+    geom_line(alpha = 0.5) +
+    theme_classic() +
+    theme(legend.position = "bottom") +
+    labs(
+     title = "Value for Responses in NY 2010",
+     x = "Response",
+     y = "Value",
+     caption = "Data from brfss package"
+  )
+brfss_data_2010
+library(patchwork)
+brfss_data_2006 + brfss_data_2010
+```
+
+### Problem 3
+Accelerometers have become an appealing alternative to self-report techniques for studying physical activity in observational studies and clinical trials, largely because of their relative objectivity. During observation periods, the devices measure “activity counts” in a short period; one-minute intervals are common. Because accelerometers can be worn comfortably and unobtrusively, they produce around-the-clock observations.
+This problem uses five weeks of accelerometer data collected on a 63 year-old male with BMI 25, who was admitted to the Advanced Cardiac Care Center of Columbia University Medical Center and diagnosed with congestive heart failure (CHF). The data can be downloaded here (./data/accel_data.csv). In this spreadsheet, variables activity.* are the activity counts for each minute of a 24-hour day starting at midnight.
