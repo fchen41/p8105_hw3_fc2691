@@ -251,26 +251,35 @@ This problem uses five weeks of accelerometer data collected on a 63 year-old ma
 read_accel = read_csv("./accel_data.csv")
 accel_clean =
   read_accel %>%
-  janitor::clean_names() %>%
+  janitor::clean_names() %>% 
   distinct() %>% 
-  mutate(
-  week = case_when(
-    day == "Monday" ~ "weekday",
-    day == "Tuesday" ~ "weekday",
-    day == "Wednesday" ~ "weekday",
-    day == "Thursday" ~ "weekday",
-    day == "Friday" ~ "weekday",
-    day == "Saturday" ~ "weekend",
-    day == "Sunday" ~ "weekday")) %>% 
-    #mutate(weekday_or_not = !(day %in% c("Saturday","Sunday"))) %>% 
-    #weekday_or_not = ifelse(weekday_or_not == T, 'weekday','weekend')
   pivot_longer(
     activity_1:activity_1440, 
-    names_to = "act_mins", 
+    names_to = "mins", 
     values_to = "act_count"
   ) %>% 
-  select(day_id, day, week, act_mins, act_count)
-accel_clean
+  mutate(
+    week = 
+      case_when(
+        day == "Monday" ~ "weekday", 
+        day == "Tuesday" ~ "weekday", 
+        day == "Wednesday" ~ "weekday", 
+        day == "Thursday" ~ "weekday",
+        day == "Friday" ~ "weekday", 
+        day == "Saturday" ~ "weekend", 
+        day == "Sunday" ~ "weekend")
+  ) %>% 
+  select(day_id, day, week, mins, act_count) %>% 
+  mutate(
+    act_level = 
+      ifelse(act_count < 0, "Error", 
+             ifelse(act_count <= 100, "Sedentary", 
+                    ifelse(act_count <= 800, "Low Intensity", 
+                           ifelse(act_count <= 2000, "Light Intensity", 
+                                  ifelse(act_count <= 4000, "Moderate Intensity", "Vigorous Intensity"))))))
+#mutate(weekday_or_not = !(day %in% c("Saturday","Sunday"))) %>% 
+#weekday_or_not = ifelse(weekday_or_not == T, 'weekday','weekend')
+kable(accel_clean[1:20,], caption = "Accelerometer Observation Data in 35 days")
 ```
 ```
 **Description:**  
@@ -278,30 +287,51 @@ My tidy dataset's dimension is (`r dim(accel_clean)`) and it includes 5 variable
 
 - Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate accross minutes to create a total activity variable for each day, and create a table showing these totals. Are any trends apparent?
 ```{r}
-accel_total = 
+# Calculate the accelerometer data on the total activity over the day. 
+accel_act_total = 
   accel_clean %>% 
   group_by(day_id) %>% 
-  summarize(act_total_n = sum(as.numeric(act_count)))
-kable(accel_total)
-
+  summarise(act_total = sum(act_count)) %>% 
+  mutate(act_total = round(as.numeric(act_total), 2))
+kable(accel_act_total[1:10,], caption = "Total Activity of Accelerometer over the Day")
+#Make a plot to see trends
 accel_total_plot = 
-  accel_total %>%
-  ggplot(aes(x = day_id, y = act_total_n)) + 
-  geom_line()
+  accel_act_total %>% 
+  ggplot(aes(x = day_id, y = act_total)) + 
+  geom_line() + 
+  theme_classic() +
+  theme(legend.position = "bottom") + 
+  labs(
+     title = "Trend of Total Activity of Accelerometer",
+     x = "Day (0~35)",
+     y = "Total Activity"
+  )
 accel_total_plot
 ```
-
+  
+**ANSWER** It seems like there is no apparent trends for the relation between total activity and day.   
+  
 - Accelerometer data allows the inspection activity over the course of the day. Make a single- panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week. Describe in words any patterns or conclusions you can make based on this graph.
 ```{r}
-accel_total_plot = 
+# wrangle accelrometer data. 
+accel_act_day = 
   accel_clean %>% 
-  separate(act_mins, c("act", "mins"), sep = "_") %>% 
-  select(-act) %>% 
-  mutate(mins = as.numeric(mins)) %>% 
-  mutate(act_count = as.numeric(act_count)) %>% 
-#accel_total_plot
-  ggplot(aes(x = as.numeric(mins), y = act_count, color = day_id)) + 
-    geom_line()
-accel_total_plot
+  mutate(act_count = round(as.numeric(act_count),2)) %>% 
+  separate(mins, into = c("act", "mins"), sep = "_") %>% 
+  mutate(mins = as.numeric(mins))
+# make a plot
+accel_act_day_plot = 
+  accel_act_day %>%
+  ggplot(aes(x = mins, y = act_count, color = day_id)) + 
+  geom_line() +
+  theme_classic() +
+  theme(legend.position = "bottom") + 
+  labs(
+     title = "24-hour Activity over the Day",
+     x = "minutes",
+     y = "Daily Activity"
+  )
+accel_act_day_plot 
 ```
-test test test
+**ANSWER** From the plot, the activity is more active during the day(morning and afternoon), and the activity count would significantly decrease during the night. 
+test  test   test
