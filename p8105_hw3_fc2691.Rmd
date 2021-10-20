@@ -149,6 +149,7 @@ brfss_clean =
     response = factor(response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent"), order = T))
 kable(brfss_clean[1:10,], caption = "BRFSS Data on 'Overall Health' Topic")
 
+
 ```
 
 Using this dataset, do or answer the following (commenting on the results of each):  
@@ -227,7 +228,7 @@ brfss_data_2010 =
   ggplot(aes(x = response, y = data_value)) +
     geom_violin(fill = "grey", color = "grey") +
     theme_classic() +
-    theme(legend.position = "bottom") + 
+    theme(legend.position = "bottom") 
     
 #Make two-panel plot
 brfss_data_2006 + brfss_data_2010 + 
@@ -246,12 +247,61 @@ This problem uses five weeks of accelerometer data collected on a 63 year-old ma
   
 - Load, tidy, and otherwise wrangle the data. Your final dataset should include all originally observed variables and values; have useful variable names; include a weekday vs weekend variable; and encode data with reasonable variable classes. Describe the resulting dataset (e.g. what variables exist, how many observations, etc).
 ```{r}
-# read_accel = read_csv("./accel_data.csv")
-# accel_clean = 
-#   read_accel %>% 
-#   
+#Tidy and wrangle accelerarometer data.
+read_accel = read_csv("./accel_data.csv")
+accel_clean =
+  read_accel %>%
+  janitor::clean_names() %>%
+  distinct() %>% 
+  mutate(
+  week = case_when(
+    day == "Monday" ~ "weekday",
+    day == "Tuesday" ~ "weekday",
+    day == "Wednesday" ~ "weekday",
+    day == "Thursday" ~ "weekday",
+    day == "Friday" ~ "weekday",
+    day == "Saturday" ~ "weekend",
+    day == "Sunday" ~ "weekday")) %>% 
+    #mutate(weekday_or_not = !(day %in% c("Saturday","Sunday"))) %>% 
+    #weekday_or_not = ifelse(weekday_or_not == T, 'weekday','weekend')
+  pivot_longer(
+    activity_1:activity_1440, 
+    names_to = "act_mins", 
+    values_to = "act_count"
+  ) %>% 
+  select(day_id, day, week, act_mins, act_count)
+accel_clean
 ```
+```
+**Description:**  
+My tidy dataset's dimension is (`r dim(accel_clean)`) and it includes 5 variables, including day_id, day, week, act_mins and act_count. It shows from the table that it includes total 50,400 observations. 
+
+- Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate accross minutes to create a total activity variable for each day, and create a table showing these totals. Are any trends apparent?
+```{r}
+accel_total = 
+  accel_clean %>% 
+  group_by(day_id) %>% 
+  summarize(act_total_n = sum(as.numeric(act_count)))
+kable(accel_total)
+
+accel_total_plot = 
+  accel_total %>%
+  ggplot(aes(x = day_id, y = act_total_n)) + 
+  geom_line()
+accel_total_plot
 ```
 
-Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate accross minutes to create a total activity variable for each day, and create a table showing these totals. Are any trends apparent?
-Accelerometer data allows the inspection activity over the course of the day. Make a single- panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week. Describe in words any patterns or conclusions you can make based on this graph.
+- Accelerometer data allows the inspection activity over the course of the day. Make a single- panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week. Describe in words any patterns or conclusions you can make based on this graph.
+```{r}
+accel_total_plot = 
+  accel_clean %>% 
+  separate(act_mins, c("act", "mins"), sep = "_") %>% 
+  select(-act) %>% 
+  mutate(mins = as.numeric(mins)) %>% 
+  mutate(act_count = as.numeric(act_count)) %>% 
+#accel_total_plot
+  ggplot(aes(x = as.numeric(mins), y = act_count, color = day_id)) + 
+    geom_line()
+accel_total_plot
+```
+
