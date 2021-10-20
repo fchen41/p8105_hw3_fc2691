@@ -11,7 +11,7 @@ library(p8105.datasets)
 library(knitr)
 
 knitr::opts_chunk$set(
-  fig.width = 6,
+  fig.width = 10,
   fig.asp = .6,
   out.width = "90%"
 )
@@ -31,7 +31,7 @@ The goal is to do some exploration of this dataset. To that end, write a short d
 
 ```{r}
 data("instacart") #load a dataset
-
+library(ggplot2)
 # Find out the most ordered aisle. 
 insta_aisle = 
   instacart %>% 
@@ -57,7 +57,7 @@ plot_insta_aisle =
     caption = "Data from the instacart package"
   )
 plot_insta_aisle
-
+####
 #Make a plot shows the number of order items in produce
 plot_insta_prod = 
   insta_aisle %>% 
@@ -143,11 +143,12 @@ brfss_clean =
   janitor::clean_names() %>% 
   distinct() %>% 
   filter(topic == "Overall Health") %>% 
-  separate(locationdesc, into = c("state", "county"), sep = " - ") %>% 
-  select(year, state, county, response, data_value) %>% 
+  separate(locationdesc, into = c("state", "county"), sep = " - ") %>%
+  select(year, state, county, response, data_value) %>%
   mutate(
-    response = factor(response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent")))
+    response = factor(response, levels = c("Poor", "Fair", "Good", "Very good", "Excellent"), order = T))
 kable(brfss_clean[1:10,], caption = "BRFSS Data on 'Overall Health' Topic")
+
 ```
 
 Using this dataset, do or answer the following (commenting on the results of each):  
@@ -205,39 +206,52 @@ brfss_response_plot
 - Make a two-panel plot showing, for the years 2006, and 2010, distribution of data_value for responses (“Poor” to “Excellent”) among locations in NY State.
 ```{r}
 library(patchwork)
+#Distribution in NY in 2006
 brfss_data_2006 = 
   brfss_clean %>% 
   filter(year == 2006 & state == "NY") %>% 
-  ggplot(aes(x = response, y = data_value, color = county)) +
-    geom_line(alpha = 0.5) +
+  ggplot(aes(x = response, y = data_value)) +
+    geom_violin(fill = "grey", color = "grey") +
     theme_classic() +
-    theme(legend.position = "bottom") +
-    labs(
-     title = "Value for Responses in NY 2006",
-     x = "Response",
-     y = "Value",
-     caption = "Data from brfss package"
-  )
-brfss_data_2006
-
+    theme(legend.position = "bottom")
+  #   labs(
+  #    title = "Value for Responses in NY 2006",
+  #    x = "Response",
+  #    y = "Value",
+  #    caption = "Data from brfss package"
+  # )
+#Distribution in NY in 2010
 brfss_data_2010 = 
   brfss_clean %>% 
   filter(year == 2010 & state == "NY") %>% 
-  ggplot(aes(x = response, y = data_value, color = county)) +
-    geom_line(alpha = 0.5) +
+  ggplot(aes(x = response, y = data_value)) +
+    geom_violin(fill = "grey", color = "grey") +
     theme_classic() +
-    theme(legend.position = "bottom") +
-    labs(
+    theme(legend.position = "bottom") + 
+    
+#Make two-panel plot
+brfss_data_2006 + brfss_data_2010 + 
+  labs(
      title = "Value for Responses in NY 2010",
      x = "Response",
      y = "Value",
      caption = "Data from brfss package"
   )
-brfss_data_2010
-library(patchwork)
-brfss_data_2006 + brfss_data_2010
 ```
 
 ### Problem 3
-Accelerometers have become an appealing alternative to self-report techniques for studying physical activity in observational studies and clinical trials, largely because of their relative objectivity. During observation periods, the devices measure “activity counts” in a short period; one-minute intervals are common. Because accelerometers can be worn comfortably and unobtrusively, they produce around-the-clock observations.
-This problem uses five weeks of accelerometer data collected on a 63 year-old male with BMI 25, who was admitted to the Advanced Cardiac Care Center of Columbia University Medical Center and diagnosed with congestive heart failure (CHF). The data can be downloaded here (./data/accel_data.csv). In this spreadsheet, variables activity.* are the activity counts for each minute of a 24-hour day starting at midnight.
+
+Accelerometers have become an appealing alternative to self-report techniques for studying physical activity in observational studies and clinical trials, largely because of their relative objectivity. During observation periods, the devices measure “activity counts” in a short period; one-minute intervals are common. Because accelerometers can be worn comfortably and unobtrusively, they produce around-the-clock observations.  
+This problem uses five weeks of accelerometer data collected on a 63 year-old male with BMI 25, who was admitted to the Advanced Cardiac Care Center of Columbia University Medical Center and diagnosed with congestive heart failure (CHF). The data can be downloaded here (./data/accel_data.csv). In this spreadsheet, variables activity.* are the activity counts for each minute of a 24-hour day starting at midnight.  
+  
+- Load, tidy, and otherwise wrangle the data. Your final dataset should include all originally observed variables and values; have useful variable names; include a weekday vs weekend variable; and encode data with reasonable variable classes. Describe the resulting dataset (e.g. what variables exist, how many observations, etc).
+```{r}
+# read_accel = read_csv("./accel_data.csv")
+# accel_clean = 
+#   read_accel %>% 
+#   
+```
+```
+
+Traditional analyses of accelerometer data focus on the total activity over the day. Using your tidied dataset, aggregate accross minutes to create a total activity variable for each day, and create a table showing these totals. Are any trends apparent?
+Accelerometer data allows the inspection activity over the course of the day. Make a single- panel plot that shows the 24-hour activity time courses for each day and use color to indicate day of the week. Describe in words any patterns or conclusions you can make based on this graph.
