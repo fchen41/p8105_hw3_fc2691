@@ -2,7 +2,7 @@
 title: "p8105_hw3_fc2691"
 author: "FC"
 date: "10/16/2021"
-output: html_document
+output: github_document
 ---
 
 ```{r}
@@ -67,7 +67,7 @@ plot_insta_prod =
     theme_classic() +
     theme(legend.position = "bottom") +
     labs(
-    title = "Order Number in produce (>10000)",
+    title = "Order Number in produce department (>10000)",
     x = "Aisle",
     y = "Order Numbers (N)",
     caption = "Data from the instacart package"
@@ -256,6 +256,7 @@ accel_clean =
   pivot_longer(
     activity_1:activity_1440, 
     names_to = "mins", 
+    #names_prefix = "activity.",
     values_to = "act_count"
   ) %>% 
   mutate(
@@ -323,7 +324,7 @@ accel_act_day =
 accel_act_day_plot = 
   accel_act_day %>%
   ggplot(aes(x = mins, y = act_count, color = day_id)) + 
-  geom_line() +
+  geom_point() + 
   theme_classic() +
   theme(legend.position = "bottom") + 
   labs(
@@ -334,4 +335,3 @@ accel_act_day_plot =
 accel_act_day_plot 
 ```
 **ANSWER** From the plot, the activity is more active during the day(morning and afternoon), and the activity count would significantly decrease during the night. 
-test  test   test
